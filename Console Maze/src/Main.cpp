@@ -7,6 +7,8 @@
 #include <conio.h>
 #include "Ansi.h"
 #include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 
 class Game {
 
@@ -19,7 +21,7 @@ public:
 
 private:
 
-	static constexpr int TIME_LIMIT = 120;
+	static constexpr int TIME_LIMIT = 5;
 	static constexpr int MAP_WIDTH = 54;
 	static constexpr int MAP_HEIGHT = 19;
 	static constexpr int RENDER_POS_Y = ansi::EMBLEM_HEIGHT;
@@ -40,8 +42,8 @@ private:
 	int m_columns = 0;
 	int m_rows = 0;
 
-	const int treasurePosX = 52; //52
-	const int treasurePosY = 16; //16
+	const int treasurePosX = 3; //52
+	const int treasurePosY = 1; //16
 
 	int playerPosX = 0;
 	int playerPosY = 1;
@@ -176,7 +178,7 @@ private:
 		// upper frame border
 		frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
 		frameBuffer += "╔" + horizontalBar + "╗";
-		
+
 		// lower frame border
 		frameBuffer += ansi::MOVE_TO(RENDER_END_POS_FRAME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
 		frameBuffer += "╚" + horizontalBar + "╝";
@@ -185,22 +187,39 @@ private:
 		for (int i = 0; i < map.size(); i++)
 		{
 			// left
-			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y +1 +i,(m_columns - MAP_WIDTH) / 2 - 1);
+			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y + 1 + i, (m_columns - MAP_WIDTH) / 2 - 1);
 			frameBuffer += "║";
 
 			// right
-			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y +1 +i,(m_columns + MAP_WIDTH) / 2 - 1);
+			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y + 1 + i, (m_columns + MAP_WIDTH) / 2 - 1);
 			frameBuffer += "║";
 
 		}
 	}
 
 	bool renderWinningScreen() {
-		std::string prompt = "Congratulations - you have found the treasure! Press any key to restart or [ESC] to quit the game";
+		std::string prompt = "Congratulations - you have found the treasure!";
 		int centerPos_X = (m_columns - prompt.size()) / 2;
 		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_X);
 		frameBuffer += ansi::CLEAR_ALL_AFTER;
 		frameBuffer += ansi::YELLOW;
+		frameBuffer += prompt;
+		std::cout << frameBuffer << std::flush;
+
+		for (int i = 5; i > 0; i--)
+		{
+			frameBuffer.clear();
+			frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 1, m_columns / 2);
+			frameBuffer += std::to_string(i);
+			std::cout << frameBuffer << std::flush;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+		FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+
+		frameBuffer.clear();
+		prompt = "Press any key to restart or [ESC] to quit the game";
+		centerPos_X = (m_columns - prompt.size()) / 2;
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 1, centerPos_X);
 		frameBuffer += prompt;
 		std::cout << frameBuffer << std::flush;
 
@@ -216,13 +235,32 @@ private:
 	}
 
 	bool renderLosingScreen() {
-		std::string prompt = "Time's up! You lost. Press any key to restart or [ESC] to quit the game";
+		std::string prompt = "Time's up! You lost.";
 		int centerPos_X = (m_columns - prompt.size()) / 2;
 		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_X);
 		frameBuffer += ansi::CLEAR_ALL_AFTER;
 		frameBuffer += ansi::RED;
 		frameBuffer += prompt;
 		std::cout << frameBuffer << std::flush;
+
+		for (int i = 5; i > 0; i--)
+		{
+			frameBuffer.clear();
+			frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 1, m_columns / 2);
+			frameBuffer += std::to_string(i);
+			std::cout << frameBuffer << std::flush;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+		FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+
+		frameBuffer.clear();
+		prompt = "Press any key to restart or [ESC] to quit the game";
+		centerPos_X = (m_columns - prompt.size()) / 2;
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 1, centerPos_X);
+		frameBuffer += prompt;
+		std::cout << frameBuffer << std::flush;
+
+
 		int key = _getch();
 		// escape = quit game
 		if (key == 27) {
@@ -233,6 +271,7 @@ private:
 	}
 
 	void renderMenu() {
+		PlaySound(L"soundtrack.wav", NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
 		int centerPos_X = (m_columns - ansi::EMBLEM_WIDTH) / 2;
 
 		// render emblem
