@@ -6,40 +6,42 @@
 #include <ctime>
 #include <conio.h>
 #include "Ansi.h"
+#include <windows.h>
 
 class Game {
 
+public:
+
+	Game(int window_columns, int window_rows) {
+		m_columns = window_columns;
+		m_rows = window_rows;
+	}
+
+private:
+
+	static constexpr int TIME_LIMIT = 120;
+	static constexpr int MAP_WIDTH = 54;
+	static constexpr int RENDER_POS_Y = ansi::EMBLEM_HEIGHT;
+
+	static constexpr int darkZoneRadius = 2;
 	enum game_state {
 		MENU, GAME, WIN, LOSE
 	};
 
-	game_state state = GAME;
+	game_state state = MENU;
 
-public:
+	int m_columns = 0;
+	int m_rows = 0;
 
-
-	static constexpr int darkZoneRadius = 2;
-
-	static constexpr int PADDING = 5;
-
-	static constexpr int EMBLEM_H = 10;
-
-	static constexpr int STAT_PANEL_WIDTH = 20;
-	static constexpr int INSTRUCTION_PANEL_H = 5;
-	static constexpr int BUFF_PANEL_H = 5;
-	static constexpr int ITEM_PANEL_H = 5;
-
-	static constexpr int MAP_H = 18;
-	static constexpr int MAP_W = 53;
-
-	const int treasurePosX = 3; //52
-	const int treasurePosY = 10; //16
+	const int treasurePosX = 52; //52
+	const int treasurePosY = 16; //16
 
 	int playerPosX = 0;
 	int playerPosY = 1;
 
-	std::string frameBuffer;
+	std::chrono::steady_clock::time_point startTime;
 
+	std::string frameBuffer;
 
 	std::vector<std::string> map = {
 		"+++++++++++++++++++++++++++++++++++++++++++++++++++++",
@@ -64,6 +66,7 @@ public:
 
 	std::vector<std::vector<bool>> exploredMap{ map.size(), std::vector<bool>(map[0].size(), false) };
 
+public:
 	void update(int inputKey) {
 
 		int tmpPosX = 0;
@@ -98,36 +101,104 @@ public:
 			return;
 		}
 
-		bool reachedFinish = playerPosX + tmpPosX == treasurePosX && playerPosY + tmpPosY == treasurePosY;
+		playerPosX += tmpPosX;
+		playerPosY += tmpPosY;
+
+		bool reachedFinish = playerPosX == treasurePosX && playerPosY == treasurePosY;
 		if (reachedFinish) {
 			state = WIN;
 		}
-
-		playerPosX += tmpPosX;
-		playerPosY += tmpPosY;
 	}
 
-	void renderTest() {
-		ansi::MOVE_TO(1, 1);
-		frameBuffer += R"(╔═╗)";
-	}
-
-	void render() {
+	bool render() {
 		frameBuffer.clear();
-		renderMap();
-		//renderTest();
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, 1);
+		frameBuffer += ansi::CLEAR_ALL_AFTER;
 
-		// print current frame
-		std::cout << ansi::TO_SAVED_POS << frameBuffer << std::flush;
+		if (state == MENU) {
+			renderMenu();
+			return true;
+		}
+
+		if (state == WIN) {
+			return renderWinningScreen();
+		}
+
+		renderMap();
+		renderTimeLeft();
+
+		std::cout << frameBuffer << std::flush;
+		return true;
+	}
+
+	void resize() {
+
+	}
+
+	bool isWon() {
+		return state == WIN;
+	}
+
+	void reset() {
+		playerPosX = 0;
+		playerPosY = 1;
+		startTime = std::chrono::steady_clock::now();
+
+		for (auto& row : exploredMap) {
+			std::fill(row.begin(), row.end(), false);
+		}
+
+		state = GAME;
+	}
+
+private:
+
+	bool renderWinningScreen() {
+		std::string prompt = "Congratulations - you have found the treasure! Press [ENTER] to restart or [ESC] to quit the game";
+		int centerPos_X = (m_columns - prompt.size()) / 2;
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_X);
+		frameBuffer += ansi::CLEAR_ALL_AFTER;
+		frameBuffer += prompt;
+		std::cout << frameBuffer << std::flush;
+
+		int key = _getch();
+
+		// enter = restart game
+		if (key == 13) {
+			reset();
+			return true;
+		}
+
+		// escape = quit game
+		if (key == 27) {
+			return false;
+		}
+	}
+	void renderMenu() {
+		int centerPos_X = (m_columns - ansi::EMBLEM_WIDTH) / 2;
+
+		// render emblem
+		for (int i = 0; i < std::size(ansi::EMBLEM); i++)
+		{
+			std::cout << ansi::MOVE_TO(i + 1, centerPos_X) << ansi::EMBLEM[i];
+			std::this_thread::sleep_for(std::chrono::milliseconds(35));
+		}
+		std::string  prompt = "Press [ENTER] to start";
+		std::cout << ansi::MOVE_TO(RENDER_POS_Y, (m_columns - prompt.size()) / 2) << prompt << "\n" << ansi::GREEN;
+
+		std::cin.get();
+
+		startTime = std::chrono::steady_clock::now();
+		state = GAME;
 	}
 
 	void renderMap() {
-		frameBuffer += ansi::MOVE_TO(1, 1);
-		frameBuffer += R"(╔═════════════════════════════════════════════════════╗)";
+
+		int centerPos_X = (m_columns - MAP_WIDTH) / 2;
+
 		for (int y = 0; y < map.size(); y++)
 		{
-			frameBuffer += ansi::MOVE_TO(y + 2, 1);
-			frameBuffer += "║";
+			frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + y, centerPos_X);
 			for (int x = 0; x < map[0].size(); x++)
 			{
 				char symbol = map[y][x];
@@ -150,7 +221,7 @@ public:
 				int dy = y - playerPosY;
 
 				// replace symbols out of view with blank space to make them invisible
-				bool inDarkZone = std::max(std::abs(dx), std::abs(dy * 2)) > darkZoneRadius;
+				bool inDarkZone = (std::max)(std::abs(dx), std::abs(dy * 2)) > darkZoneRadius;
 				if (inDarkZone) {
 					if (exploredMap[y][x]) {
 						frameBuffer += colorFar;
@@ -167,51 +238,38 @@ public:
 				frameBuffer += symbol;
 				exploredMap[y][x] = true;
 			}
-			frameBuffer += "║";
 		}
-		frameBuffer += ansi::MOVE_TO(MAP_H + 2, 1);
-		frameBuffer += R"(╚═════════════════════════════════════════════════════╝)";
 	}
 
-	bool isWon() {
-		return state == WIN;
-	}
-
-	void reset() {
-		playerPosX = 0;
-		playerPosY = 1;
-
-		for (auto& row : exploredMap) {
-			std::fill(row.begin(), row.end(), false);
+	void renderTimeLeft() {
+		int timeElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - startTime).count();
+		std::string minutesLeft = std::to_string((TIME_LIMIT - timeElapsed) / 60);
+		std::string secondsLeft = std::to_string((TIME_LIMIT - timeElapsed) % 60);
+		if (secondsLeft.size() == 1) {
+			secondsLeft = "0" + secondsLeft;
 		}
-
-		state = GAME;
+		frameBuffer += ansi::GREEN;
+		frameBuffer += "Time left: " + minutesLeft + ":" + secondsLeft;
 	}
 };
 
 
 int main() {
 
-	Game game;
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	int window_columns, window_rows;
+
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	window_columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+	window_rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+
+	Game game(window_columns, window_rows);
 
 	system("chcp 65001 > nul");
 
 	// settings
 	std::cout << ansi::CURSOR_OFF; // switch off cursor
 	std::cout << ansi::GREEN; // set color to green
-
-	// render emblem
-	for (const auto& line : ansi::EMBLEM) {
-		std::cout << line << "\n";
-		std::this_thread::sleep_for(std::chrono::milliseconds(35));
-	}
-
-	std::cout << ansi::SAVE_CURSOR_POS; // save render location
-	std::cout << "Press [ENTER] to start" << "\n" << ansi::GREEN;
-
-	std::cin.get();
-
-	std::cout << ansi::TO_SAVED_POS << ansi::CLEAR_BELOW;
 
 	bool running = true;
 	while (running) {
@@ -222,24 +280,7 @@ int main() {
 			int key = _getch();   // read one keypress, no Enter needed
 			game.update(key);
 		}
-		game.render();
-
-		if (game.isWon()) {
-			std::cout << ansi::TO_SAVED_POS << ansi::CLEAR_BELOW;
-			std::cout << ansi::GREEN << "Congratulations - you have found the treasure! Press [ENTER] to restart or [ESC] to quit the game";
-			int key = _getch();
-
-			// enter = restart game
-			if (key == 13) {
-				std::cout << ansi::TO_SAVED_POS << ansi::CLEAR_BELOW;
-				game.reset();
-			}
-
-			// escape = quit game
-			if (key == 27) {
-				break;
-			}
-		}
+		running = game.render();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));// simple approach to get 30ish fps
 	}

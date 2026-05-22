@@ -16,9 +16,11 @@ namespace ansi {
 	inline constexpr std::string_view SAVE_CURSOR_POS = "\033[s";
 	inline constexpr std::string_view TO_SAVED_POS = "\033[u";
 	inline constexpr std::string_view HOME = "\033[H";
-	inline constexpr std::string_view CLEAR_BELOW = "\033[J";
+	inline constexpr std::string_view CLEAR_ALL_AFTER = "\033[J";
 
-	const std::string EMBLEM[] = {
+	inline constexpr int EMBLEM_WIDTH = 72;
+	inline constexpr int EMBLEM_HEIGHT = 10;
+	inline std::string EMBLEM[] = {
 		"",
 		"",
 		R"( ███╗   ███╗ ██████╗ ██████╗ ██╗ ██████╗  █████╗ ███╗   ███╗██╗ ██████╗ )",
