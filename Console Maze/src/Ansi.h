@@ -9,6 +9,7 @@ namespace ansi {
 	inline constexpr std::string_view RED = "\033[1;31m";
 	inline constexpr std::string_view YELLOW = "\033[1;33m";
 	inline constexpr std::string_view DARK_YELLOW = "\033[38;2;50;50;0m";
+	inline constexpr std::string_view CYAN = "\033[1;36m";
 
 	inline constexpr std::string_view RESET = "\033[0m";
 	inline constexpr std::string_view CURSOR_OFF = "\033[?25l";

@@ -21,7 +21,14 @@ private:
 
 	static constexpr int TIME_LIMIT = 120;
 	static constexpr int MAP_WIDTH = 54;
+	static constexpr int MAP_HEIGHT = 19;
 	static constexpr int RENDER_POS_Y = ansi::EMBLEM_HEIGHT;
+	static constexpr int RENDER_START_POS_FRAME_Y = RENDER_POS_Y;
+	static constexpr int RENDER_END_POS_FRAME_Y = RENDER_START_POS_FRAME_Y + MAP_HEIGHT;
+	static constexpr int RENDER_START_POS_MAP_Y = RENDER_START_POS_FRAME_Y + 1;
+	static constexpr int RENDER_START_POS_TIME_Y = RENDER_END_POS_FRAME_Y + 1;
+
+
 
 	static constexpr int darkZoneRadius = 2;
 	enum game_state {
@@ -124,19 +131,24 @@ public:
 			return renderWinningScreen();
 		}
 
+		if (state == LOSE) {
+			return renderLosingScreen();
+		}
+
 		renderMap();
+		renderFrame();
 		renderTimeLeft();
 
 		std::cout << frameBuffer << std::flush;
 		return true;
 	}
 
-	void resize() {
-
-	}
-
 	bool isWon() {
 		return state == WIN;
+	}
+
+	bool isLost() {
+		return state == LOSE;
 	}
 
 	void reset() {
@@ -153,27 +165,73 @@ public:
 
 private:
 
+	void renderFrame() {
+
+		frameBuffer += ansi::GREEN;
+
+		std::string horizontalBar;
+		for (int i = 0; i < map[0].size(); i++)
+			horizontalBar += "═";
+
+		// upper frame border
+		frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
+		frameBuffer += "╔" + horizontalBar + "╗";
+		
+		// lower frame border
+		frameBuffer += ansi::MOVE_TO(RENDER_END_POS_FRAME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
+		frameBuffer += "╚" + horizontalBar + "╝";
+
+		// left and right frame border
+		for (int i = 0; i < map.size(); i++)
+		{
+			// left
+			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y +1 +i,(m_columns - MAP_WIDTH) / 2 - 1);
+			frameBuffer += "║";
+
+			// right
+			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y +1 +i,(m_columns + MAP_WIDTH) / 2 - 1);
+			frameBuffer += "║";
+
+		}
+	}
+
 	bool renderWinningScreen() {
-		std::string prompt = "Congratulations - you have found the treasure! Press [ENTER] to restart or [ESC] to quit the game";
+		std::string prompt = "Congratulations - you have found the treasure! Press any key to restart or [ESC] to quit the game";
 		int centerPos_X = (m_columns - prompt.size()) / 2;
 		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_X);
 		frameBuffer += ansi::CLEAR_ALL_AFTER;
+		frameBuffer += ansi::YELLOW;
 		frameBuffer += prompt;
 		std::cout << frameBuffer << std::flush;
 
 		int key = _getch();
 
-		// enter = restart game
-		if (key == 13) {
-			reset();
-			return true;
-		}
 
 		// escape = quit game
 		if (key == 27) {
 			return false;
 		}
+		reset();
+		return true;
 	}
+
+	bool renderLosingScreen() {
+		std::string prompt = "Time's up! You lost. Press any key to restart or [ESC] to quit the game";
+		int centerPos_X = (m_columns - prompt.size()) / 2;
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_X);
+		frameBuffer += ansi::CLEAR_ALL_AFTER;
+		frameBuffer += ansi::RED;
+		frameBuffer += prompt;
+		std::cout << frameBuffer << std::flush;
+		int key = _getch();
+		// escape = quit game
+		if (key == 27) {
+			return false;
+		}
+		reset();
+		return true;
+	}
+
 	void renderMenu() {
 		int centerPos_X = (m_columns - ansi::EMBLEM_WIDTH) / 2;
 
@@ -198,7 +256,7 @@ private:
 
 		for (int y = 0; y < map.size(); y++)
 		{
-			frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + y, centerPos_X);
+			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_MAP_Y + y, centerPos_X);
 			for (int x = 0; x < map[0].size(); x++)
 			{
 				char symbol = map[y][x];
@@ -243,12 +301,17 @@ private:
 
 	void renderTimeLeft() {
 		int timeElapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - startTime).count();
+		if (timeElapsed > TIME_LIMIT) {
+			state = LOSE;
+			return;
+		}
 		std::string minutesLeft = std::to_string((TIME_LIMIT - timeElapsed) / 60);
 		std::string secondsLeft = std::to_string((TIME_LIMIT - timeElapsed) % 60);
 		if (secondsLeft.size() == 1) {
 			secondsLeft = "0" + secondsLeft;
 		}
-		frameBuffer += ansi::GREEN;
+		frameBuffer += ansi::MOVE_TO(RENDER_START_POS_TIME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
+		frameBuffer += ansi::RED;
 		frameBuffer += "Time left: " + minutesLeft + ":" + secondsLeft;
 	}
 };
