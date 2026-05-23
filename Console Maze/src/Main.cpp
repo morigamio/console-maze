@@ -8,6 +8,7 @@
 #include "Ansi.h"
 #include <windows.h>
 #include <mmsystem.h>
+#include "Frame.h"
 #pragma comment(lib, "winmm.lib")
 
 class Game {
@@ -17,11 +18,44 @@ public:
 	Game(int window_columns, int window_rows) {
 		m_columns = window_columns;
 		m_rows = window_rows;
+
+		int left = (m_columns - MAP_WIDTH) / 2 - 1;
+		int right = (m_columns + MAP_WIDTH) / 2 - 1;
+		int top = RENDER_START_POS_FRAME_Y;
+		int bottom = RENDER_END_POS_FRAME_Y;
+
+		int sidebarWidth = 22;
+		int sideLeft = left - sidebarWidth;
+		int sideRight = right + sidebarWidth;
+		int div1 = top + MAP_HEIGHT / 3;
+		int div2 = top + 2 * MAP_HEIGHT / 3;
+
+		FrameBuilder fb;
+
+		// top row
+		fb.add(sideLeft, top, Junction::CORNER_TL);
+		fb.add(left, top, Junction::T_DOWN);
+		fb.add(right, top, Junction::T_DOWN);
+		fb.add(sideRight, top, Junction::CORNER_TR);
+
+		// left sidebar dividers (3 blocks)
+		fb.add(sideLeft, div1, Junction::T_RIGHT);
+		fb.add(left, div1, Junction::T_LEFT);
+		fb.add(sideLeft, div2, Junction::T_RIGHT);
+		fb.add(left, div2, Junction::T_LEFT);
+
+		// bottom row
+		fb.add(sideLeft, bottom, Junction::CORNER_BL);
+		fb.add(left, bottom, Junction::T_UP);
+		fb.add(right, bottom, Junction::T_UP);
+		fb.add(sideRight, bottom, Junction::CORNER_BR);
+
+		m_frame = fb.build();
 	}
 
 private:
 
-	static constexpr int TIME_LIMIT = 5;
+	static constexpr int TIME_LIMIT = 120;
 	static constexpr int MAP_WIDTH = 54;
 	static constexpr int MAP_HEIGHT = 19;
 	static constexpr int RENDER_POS_Y = ansi::EMBLEM_HEIGHT;
@@ -31,6 +65,7 @@ private:
 	static constexpr int RENDER_START_POS_TIME_Y = RENDER_END_POS_FRAME_Y + 1;
 
 
+	std::string m_frame;
 
 	static constexpr int darkZoneRadius = 2;
 	enum game_state {
@@ -42,8 +77,8 @@ private:
 	int m_columns = 0;
 	int m_rows = 0;
 
-	const int treasurePosX = 3; //52
-	const int treasurePosY = 1; //16
+	const int treasurePosX = 52; //52
+	const int treasurePosY = 16; //16
 
 	int playerPosX = 0;
 	int playerPosY = 1;
@@ -170,31 +205,7 @@ private:
 	void renderFrame() {
 
 		frameBuffer += ansi::GREEN;
-
-		std::string horizontalBar;
-		for (int i = 0; i < map[0].size(); i++)
-			horizontalBar += "═";
-
-		// upper frame border
-		frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
-		frameBuffer += "╔" + horizontalBar + "╗";
-
-		// lower frame border
-		frameBuffer += ansi::MOVE_TO(RENDER_END_POS_FRAME_Y, (m_columns - MAP_WIDTH) / 2 - 1);
-		frameBuffer += "╚" + horizontalBar + "╝";
-
-		// left and right frame border
-		for (int i = 0; i < map.size(); i++)
-		{
-			// left
-			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y + 1 + i, (m_columns - MAP_WIDTH) / 2 - 1);
-			frameBuffer += "║";
-
-			// right
-			frameBuffer += ansi::MOVE_TO(RENDER_START_POS_FRAME_Y + 1 + i, (m_columns + MAP_WIDTH) / 2 - 1);
-			frameBuffer += "║";
-
-		}
+		frameBuffer += m_frame;
 	}
 
 	bool renderWinningScreen() {

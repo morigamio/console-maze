@@ -26,6 +26,9 @@
     <ClInclude Include="src\Ansi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Frame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="src\Ideas.txt" />
