@@ -139,12 +139,15 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Game.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\LevelGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Ansi.h" />
     <ClInclude Include="src\Frame.h" />
+    <ClInclude Include="src\Game.h" />
+    <ClInclude Include="src\Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="src\Ideas.txt" />
