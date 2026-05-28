@@ -147,6 +147,8 @@
     <ClInclude Include="src\Ansi.h" />
     <ClInclude Include="src\Frame.h" />
     <ClInclude Include="src\Game.h" />
+    <ClInclude Include="src\Map.h" />
+    <ClInclude Include="src\MenuOption.h" />
     <ClInclude Include="src\Utils.h" />
   </ItemGroup>
   <ItemGroup>

@@ -5,6 +5,7 @@
 #include <conio.h>
 #include <windows.h>
 #include "Frame.h"
+#include "MenuOption.h"
 
 Game::Game(int window_columns, int window_rows) {
 	m_columns = window_columns;
@@ -56,12 +57,16 @@ void Game::run() {
 			update(key);
 		}
 
-		if (state == MENU) {
-			renderMenu();
-			std::cin.get();
+		// render
+		frameBuffer.clear();
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, 1);
+		frameBuffer += ansi::CLEAR_ALL_AFTER;
 
-			startTime = std::chrono::steady_clock::now();
-			state = GAME;
+		if (state == MAIN_MENU) {
+			renderMenu();
+		}
+		else if (state == PAUSE_MENU) {
+			//TODO implement pause menu in the future
 		}
 		else if (state == GAME) {
 			renderGame();
@@ -72,7 +77,7 @@ void Game::run() {
 			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
 			int key = _getch();
 
-			if (key == 27) { // escape = quit game
+			if (key == ESC) { // escape = quit game
 				running = false;
 			}
 			reset();
@@ -83,7 +88,7 @@ void Game::run() {
 			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
 			int key = _getch();
 
-			if (key == 27) { // escape = quit game
+			if (key == ESC) { // escape = quit game
 				running = false;
 			}
 			reset();
@@ -95,49 +100,65 @@ void Game::run() {
 
 void Game::update(int inputKey) {
 
-	int tmpPosX = 0;
-	int tmpPosY = 0;
-
-	switch (inputKey) {
-	case 'w': tmpPosY = -1; break;
-	case 's': tmpPosY = 1; break;
-	case 'a': tmpPosX = -1; break;
-	case 'd': tmpPosX = 1; break;
-	}
-
-	bool withinLeftBound = playerPosX + tmpPosX > -1;
-	bool withinRightBound = playerPosX + tmpPosX < (int)map[0].size();
-	bool withinUpperBound = playerPosY + tmpPosY > -1;
-	bool withinLowerBound = playerPosY + tmpPosY < (int)map.size();
-
-	if (!withinLeftBound || !withinRightBound || !withinLowerBound || !withinUpperBound) {
+	if (state == MAIN_MENU) {
+		switch (inputKey) {
+		case UP: selectedMenuIndex = std::clamp(selectedMenuIndex - 1, 0, static_cast<int>(MenuOption::COUNT) - 1); break;
+		case DOWN: selectedMenuIndex = std::clamp(selectedMenuIndex + 1, 0, static_cast<int>(MenuOption::COUNT) - 1); break;
+		case ENTER:
+			if (selectedMenuIndex == static_cast<int> (MenuOption::START_GAME)) {
+				startTime = std::chrono::steady_clock::now();
+				state = GAME;
+			}
+			else if (selectedMenuIndex == static_cast<int>(MenuOption::SETTINGS)) {
+				//TODO implement settings in the future
+			}
+			else if (selectedMenuIndex == static_cast<int>(MenuOption::EXIT)) {
+				running = false;
+			}
+			break;
+		}
 		return;
 	}
 
-	bool isWall = map[playerPosY + tmpPosY][playerPosX + tmpPosX] == '+';
-	if (isWall) {
+	else if (state == PAUSE_MENU) {
+		//TODO implement pause menu in the future
 		return;
 	}
 
-	playerPosX += tmpPosX;
-	playerPosY += tmpPosY;
+	else if (state == GAME) {
+		int tmpPosX = 0;
+		int tmpPosY = 0;
 
-	if (playerPosX == treasurePosX && playerPosY == treasurePosY) {
-		state = WIN;
+		switch (inputKey) {
+		case UP: tmpPosY = -1; break;
+		case DOWN: tmpPosY = 1; break;
+		case LEFT: tmpPosX = -1; break;
+		case RIGHT: tmpPosX = 1; break;
+		}
+
+		bool withinLeftBound = playerPosX + tmpPosX > -1;
+		bool withinRightBound = playerPosX + tmpPosX < (int)map[0].size();
+		bool withinUpperBound = playerPosY + tmpPosY > -1;
+		bool withinLowerBound = playerPosY + tmpPosY < (int)map.size();
+
+		if (!withinLeftBound || !withinRightBound || !withinLowerBound || !withinUpperBound) {
+			return;
+		}
+
+		bool isWall = map[playerPosY + tmpPosY][playerPosX + tmpPosX] == '+';
+		if (isWall) {
+			return;
+		}
+
+		playerPosX += tmpPosX;
+		playerPosY += tmpPosY;
+
+		if (playerPosX == treasurePosX && playerPosY == treasurePosY) {
+			state = WIN;
+		}
 	}
 }
 
-void Game::renderGame() {
-	frameBuffer.clear();
-	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, 1);
-	frameBuffer += ansi::CLEAR_ALL_AFTER;
-
-	renderMap();
-	renderFrame();
-	renderTimeLeft();
-
-	std::cout << frameBuffer << std::flush;
-}
 
 void Game::renderEmblem() {
 	int centerPos_X = (m_columns - ansi::EMBLEM_WIDTH) / 2;
@@ -149,11 +170,35 @@ void Game::renderEmblem() {
 	}
 }
 
+
 void Game::renderMenu() {
 
-	//TODO extend menu in the future
-	std::string prompt = "Press [ENTER] to start the game.";
-	std::cout << ansi::MOVE_TO(RENDER_POS_Y, (m_columns - (int)prompt.size()) / 2) << prompt << "\n" << ansi::GREEN;
+	std::string prompt = "Chose an option with [W] or [S] and press [ENTER] to confirm.";
+	frameBuffer += ansi::GREEN;
+	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, (m_columns - (int)prompt.size()) / 2);
+	frameBuffer += prompt;
+	for (int i = 0; i < static_cast<int>(MenuOption::COUNT); i++)
+	{
+		if (i == selectedMenuIndex)
+			frameBuffer += ansi::YELLOW;
+		else {
+			frameBuffer += ansi::GREEN;
+		}
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 2 + i, (m_columns - (int)prompt.size()) / 2);
+		frameBuffer += std::to_string(i) + ". " + to_string(static_cast<MenuOption>(i));
+	}
+
+	std::cout << frameBuffer << std::flush;
+}
+
+void Game::renderGame() {
+
+
+	renderMap();
+	renderFrame();
+	renderTimeLeft();
+
+	std::cout << frameBuffer << std::flush;
 }
 
 void Game::renderMap() {
@@ -184,7 +229,7 @@ void Game::renderMap() {
 			int dy = y - playerPosY;
 
 			// replace symbols out of view with blank space to make them invisible
-			bool inDarkZone = (std::max)(std::abs(dx), std::abs(dy * 2)) > darkZoneRadius;
+			bool inDarkZone = (std::max)(std::abs(dx), std::abs(dy * 2)) > torchRadius;
 			if (inDarkZone) {
 				if (exploredMap[y][x]) {
 					frameBuffer += colorFar;
@@ -283,14 +328,6 @@ void Game::renderLosingScreen() {
 	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 1, centerPos_X);
 	frameBuffer += prompt;
 	std::cout << frameBuffer << std::flush;
-}
-
-bool Game::isWon() {
-	return state == WIN;
-}
-
-bool Game::isLost() {
-	return state == LOSE;
 }
 
 void Game::reset() {
