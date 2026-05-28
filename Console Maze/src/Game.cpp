@@ -130,6 +130,7 @@ void Game::update(int inputKey) {
 		int tmpPosY = 0;
 
 		switch (inputKey) {
+			//TODO pause menu in the future, currently pressing ESC just does nothing
 		case UP: tmpPosY = -1; break;
 		case DOWN: tmpPosY = 1; break;
 		case LEFT: tmpPosX = -1; break;
@@ -137,9 +138,9 @@ void Game::update(int inputKey) {
 		}
 
 		bool withinLeftBound = playerPosX + tmpPosX > -1;
-		bool withinRightBound = playerPosX + tmpPosX < (int)map[0].size();
+		bool withinRightBound = playerPosX + tmpPosX < static_cast<int>(map[0].size());
 		bool withinUpperBound = playerPosY + tmpPosY > -1;
-		bool withinLowerBound = playerPosY + tmpPosY < (int)map.size();
+		bool withinLowerBound = playerPosY + tmpPosY < static_cast<int>(map.size());
 
 		if (!withinLeftBound || !withinRightBound || !withinLowerBound || !withinUpperBound) {
 			return;
@@ -275,7 +276,6 @@ void Game::renderTimeLeft() {
 }
 
 void Game::renderWinningScreen() {
-	frameBuffer.clear();
 
 	std::string prompt = "Congratulations - you have found the treasure!";
 	int centerPos_X = (m_columns - (int)prompt.size()) / 2;
@@ -303,7 +303,6 @@ void Game::renderWinningScreen() {
 }
 
 void Game::renderLosingScreen() {
-	frameBuffer.clear();
 
 	std::string prompt = "Time's up! You lost.";
 	int centerPos_X = (m_columns - (int)prompt.size()) / 2;

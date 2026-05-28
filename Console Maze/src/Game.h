@@ -12,7 +12,7 @@ public:
 
 private:
 
-	static constexpr int TIME_LIMIT = 120;
+	static constexpr int TIME_LIMIT = 5;
 	static constexpr int MAP_WIDTH = 54;
 	static constexpr int MAP_HEIGHT = 19;
 	static constexpr int RENDER_POS_Y = ansi::EMBLEM_HEIGHT;
