@@ -21,3 +21,5 @@
   top of each other, one with instructions, one with items. at the very bottom of the three column part is a       
   section just like the header, so basically a footer, which gives a little hint where the treasure might be at     
   the beginning of the game 
+
+  double buffering to avoid flickering, as map or renderable objects are get more and more complex, and to make the rendering smoother

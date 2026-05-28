@@ -60,7 +60,6 @@ void Game::run() {
 		// render
 		frameBuffer.clear();
 		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, 1);
-		frameBuffer += ansi::CLEAR_ALL_AFTER;
 
 		if (state == MAIN_MENU) {
 			renderMenu();
@@ -108,6 +107,7 @@ void Game::update(int inputKey) {
 			if (selectedMenuIndex == static_cast<int> (MenuOption::START_GAME)) {
 				startTime = std::chrono::steady_clock::now();
 				state = GAME;
+				clearScreen();
 			}
 			else if (selectedMenuIndex == static_cast<int>(MenuOption::SETTINGS)) {
 				//TODO implement settings in the future
@@ -156,6 +156,7 @@ void Game::update(int inputKey) {
 
 		if (playerPosX == treasurePosX && playerPosY == treasurePosY) {
 			state = WIN;
+			clearScreen();
 		}
 	}
 }
@@ -173,10 +174,10 @@ void Game::renderEmblem() {
 
 
 void Game::renderMenu() {
-
+	int centerPos_x = (m_columns - ansi::EMBLEM_WIDTH) / 2;
 	std::string prompt = "Chose an option with [W] or [S] and press [ENTER] to confirm.";
 	frameBuffer += ansi::GREEN;
-	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, (m_columns - (int)prompt.size()) / 2);
+	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_x);
 	frameBuffer += prompt;
 	for (int i = 0; i < static_cast<int>(MenuOption::COUNT); i++)
 	{
@@ -185,7 +186,7 @@ void Game::renderMenu() {
 		else {
 			frameBuffer += ansi::GREEN;
 		}
-		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 2 + i, (m_columns - (int)prompt.size()) / 2);
+		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 2 + i, centerPos_x);
 		frameBuffer += std::to_string(i) + ". " + to_string(static_cast<MenuOption>(i));
 	}
 
@@ -261,6 +262,7 @@ void Game::renderTimeLeft() {
 
 	if (timeElapsed > TIME_LIMIT) {
 		state = LOSE;
+		clearScreen();
 		return;
 	}
 
@@ -339,4 +341,11 @@ void Game::reset() {
 	}
 
 	state = GAME;
+}
+
+void Game::clearScreen() {
+	frameBuffer.clear(); //TODO optimize this by using double buffering
+	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, 1);
+	frameBuffer += ansi::CLEAR_ALL_AFTER;
+	std::cout << frameBuffer << std::flush;
 }
