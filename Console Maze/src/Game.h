@@ -20,6 +20,7 @@ private:
 	static constexpr int RENDER_END_POS_FRAME_Y = RENDER_START_POS_FRAME_Y + MAP_HEIGHT;
 	static constexpr int RENDER_START_POS_MAP_Y = RENDER_START_POS_FRAME_Y + 1;
 	static constexpr int RENDER_START_POS_TIME_Y = RENDER_END_POS_FRAME_Y + 1;
+	static constexpr int RENDER_START_PAUSE_MENU_Y = RENDER_START_POS_FRAME_Y + MAP_HEIGHT / 2 - 5;
 
 	static constexpr int torchRadius = 2;
 
@@ -79,6 +80,7 @@ private:
 	void renderEmblem();
 	void renderGame();
 	void renderMenu();
+	void renderPauseMenu();
 	void renderMap();
 	void renderFrame();
 	void renderTimeLeft();
@@ -86,6 +88,7 @@ private:
 	void renderLosingScreen();
 	bool isWon();
 	bool isLost();
-	void reset();
+	void newGame();
+	void exitToMainMenu();
 	void clearScreen();
 };

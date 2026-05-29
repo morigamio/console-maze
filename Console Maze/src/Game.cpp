@@ -65,6 +65,7 @@ void Game::run() {
 			renderMenu();
 		}
 		else if (state == PAUSE_MENU) {
+			renderPauseMenu();
 			//TODO implement pause menu in the future
 		}
 		else if (state == GAME) {
@@ -79,7 +80,7 @@ void Game::run() {
 			if (key == ESC) { // escape = quit game
 				running = false;
 			}
-			reset();
+			newGame();
 		}
 		else if (state == LOSE) {
 			renderLosingScreen();
@@ -90,7 +91,7 @@ void Game::run() {
 			if (key == ESC) { // escape = quit game
 				running = false;
 			}
-			reset();
+			newGame();
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(33)); // simple approach to get 30ish fps
@@ -105,9 +106,8 @@ void Game::update(int inputKey) {
 		case DOWN: selectedMenuIndex = std::clamp(selectedMenuIndex + 1, 0, static_cast<int>(MenuOption::COUNT) - 1); break;
 		case ENTER:
 			if (selectedMenuIndex == static_cast<int> (MenuOption::START_GAME)) {
-				startTime = std::chrono::steady_clock::now();
-				state = GAME;
 				clearScreen();
+				newGame();
 			}
 			else if (selectedMenuIndex == static_cast<int>(MenuOption::SETTINGS)) {
 				//TODO implement settings in the future
@@ -121,7 +121,25 @@ void Game::update(int inputKey) {
 	}
 
 	else if (state == PAUSE_MENU) {
-		//TODO implement pause menu in the future
+		switch (inputKey) {
+		case UP: selectedPauseMenuIndex = std::clamp(selectedPauseMenuIndex - 1, 0, static_cast<int>(PauseMenuOption::COUNT) - 1); break;
+		case DOWN: selectedPauseMenuIndex = std::clamp(selectedPauseMenuIndex + 1, 0, static_cast<int>(PauseMenuOption::COUNT) - 1); break;
+		case ENTER:
+			if (selectedPauseMenuIndex == static_cast<int> (PauseMenuOption::RESUME)) {
+				state = GAME;
+			}
+			else if (selectedPauseMenuIndex == static_cast<int>(PauseMenuOption::RESTART)) {
+				state = GAME;
+				newGame();
+			}
+			else if (selectedPauseMenuIndex == static_cast<int>(PauseMenuOption::EXIT)) {
+				state = MAIN_MENU;
+				selectedMenuIndex = 0;
+				clearScreen();
+			}
+			break;
+		case ESC: state = GAME; break;
+		}
 		return;
 	}
 
@@ -130,11 +148,11 @@ void Game::update(int inputKey) {
 		int tmpPosY = 0;
 
 		switch (inputKey) {
-			//TODO pause menu in the future, currently pressing ESC just does nothing
 		case UP: tmpPosY = -1; break;
 		case DOWN: tmpPosY = 1; break;
 		case LEFT: tmpPosX = -1; break;
 		case RIGHT: tmpPosX = 1; break;
+		case ESC: state = PAUSE_MENU; selectedPauseMenuIndex = 0; break;
 		}
 
 		bool withinLeftBound = playerPosX + tmpPosX > -1;
@@ -187,7 +205,27 @@ void Game::renderMenu() {
 			frameBuffer += ansi::GREEN;
 		}
 		frameBuffer += ansi::MOVE_TO(RENDER_POS_Y + 2 + i, centerPos_x);
-		frameBuffer += std::to_string(i) + ". " + to_string(static_cast<MenuOption>(i));
+		frameBuffer += std::to_string(i+1) + ". " + to_string(static_cast<MenuOption>(i));
+	}
+
+	std::cout << frameBuffer << std::flush;
+}
+
+void Game::renderPauseMenu() {
+	std::string prompt = "Game paused:";
+	int centerPos_x = (m_columns - static_cast<int>(prompt.size())) / 2;
+	frameBuffer += ansi::GREEN;
+	frameBuffer += ansi::MOVE_TO(RENDER_START_PAUSE_MENU_Y, centerPos_x);
+	frameBuffer += prompt;
+	for (int i = 0; i < static_cast<int>(PauseMenuOption::COUNT); i++)
+	{
+		if (i == selectedPauseMenuIndex)
+			frameBuffer += ansi::YELLOW;
+		else {
+			frameBuffer += ansi::GREEN;
+		}
+		frameBuffer += ansi::MOVE_TO(RENDER_START_PAUSE_MENU_Y + 1 + i, centerPos_x);
+		frameBuffer += std::to_string(i+1) + ". " + to_string(static_cast<PauseMenuOption>(i));
 	}
 
 	std::cout << frameBuffer << std::flush;
@@ -280,7 +318,7 @@ void Game::renderTimeLeft() {
 void Game::renderWinningScreen() {
 
 	std::string prompt = "Congratulations - you have found the treasure!";
-	int centerPos_X = (m_columns - (int)prompt.size()) / 2;
+	int centerPos_X = (m_columns - static_cast<int>(prompt.size())) / 2;
 	frameBuffer += ansi::MOVE_TO(RENDER_POS_Y, centerPos_X);
 	frameBuffer += ansi::CLEAR_ALL_AFTER;
 	frameBuffer += ansi::YELLOW;
@@ -331,7 +369,7 @@ void Game::renderLosingScreen() {
 	std::cout << frameBuffer << std::flush;
 }
 
-void Game::reset() {
+void Game::newGame() {
 	playerPosX = 0;
 	playerPosY = 1;
 	startTime = std::chrono::steady_clock::now();
